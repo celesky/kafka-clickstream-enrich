@@ -38,20 +38,22 @@ public class ClickstreamEnrichment {
         // props.put(CommonClientConfigs.METADATA_MAX_AGE_CONFIG, 500);
 
         KStreamBuilder builder = new KStreamBuilder();
-
+        // 为点击事件和搜索事件创建流对象
         KStream<Integer, PageView> views = builder.stream(Serdes.Integer(), new PageViewSerde(), Constants.PAGE_VIEW_TOPIC);
+        // 给用户信息定义一个 KTable. KTable 是本地缓存，可以通过变更流来对其进行更新。
         KTable<Integer, UserProfile> profiles = builder.table(Serdes.Integer(), new ProfileSerde(), Constants.USER_PROFILE_TOPIC, "profile-store");
         KStream<Integer, Search> searches = builder.stream(Serdes.Integer(), new SearchSerde(), Constants.SEARCH_TOPIC);
 
+        // 点击事件流与信息表连接起来 ， 将用户信息填充到点击事件里
         KStream<Integer, UserActivity> viewsWithProfile = views.leftJoin(profiles,
                     (page, profile) -> {
                         if (profile != null)
                             return new UserActivity(profile.getUserID(), profile.getUserName(), profile.getZipcode(), profile.getInterests(), "", page.getPage());
                         else
                            return new UserActivity(-1, "", "", null, "", page.getPage());
+                     });
 
-        });
-
+        // 接下来要将点击信息和用户的搜索事件连接起来。这也是一个左连接操作，不过现在连接的是两个流，而不是流和表。
         KStream<Integer, UserActivity> userActivityKStream = viewsWithProfile.leftJoin(searches,
                 (userActivity, search) -> {
                     if (search != null)
@@ -60,6 +62,10 @@ public class ClickstreamEnrichment {
                         userActivity.updateSearch("");
                     return userActivity;
                 },
+                // 我们要把具有相关性的 搜索事件和点击事件连接起来。
+                // 具有相关性的点击事件应该发生在搜索之后的一小段时间内。所以这里定义了一个一秒钟的连接时间窗口。
+                // 在搜索之后的 一秒钟内发生的点击事件才被认为是具有相关性的， 而且搜索关键词也会被放进包含了点击信息和用户信息 的活动记录里，
+                // 这样有助于对搜索和搜索结果进行全面的分析。
                 JoinWindows.of(1000), Serdes.Integer(), new UserActivitySerde(), new SearchSerde());
 
         userActivityKStream.to(Serdes.Integer(), new UserActivitySerde(), Constants.USER_ACTIVITY_TOPIC);

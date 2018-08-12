@@ -8,8 +8,8 @@ public class UserActivity {
     String userName;
     String zipcode;
     String[] interests;
-    String searchTerm;
-    String page;
+    String searchTerm; //用户的搜索词
+    String page; //用户点击匹配的页面
 
     public UserActivity(int userId, String userName, String zipcode, String[] interests, String searchTerm, String page) {
         this.userId = userId;
