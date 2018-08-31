@@ -78,9 +78,9 @@ public class ClickstreamEnrichment {
 
         // usually the stream application would be running forever,
         // in this example we just let it run for some time and stop since the input data is finite.
-        Thread.sleep(60000L);
+        //Thread.sleep(60000L);
 
-        streams.close();
+        //treams.close();
 
 
     }

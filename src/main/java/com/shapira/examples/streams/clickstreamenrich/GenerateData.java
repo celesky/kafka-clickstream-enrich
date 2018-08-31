@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.shapira.examples.streams.clickstreamenrich.model.PageView;
 import com.shapira.examples.streams.clickstreamenrich.model.Search;
 import com.shapira.examples.streams.clickstreamenrich.model.UserProfile;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -16,6 +17,7 @@ import java.util.Properties;
  * This class will generate fake clicks, fake searches and fake profile updates
  * For simplicity, we will actually generate very few events - 2 profiles, update to one profile, 3 searches, 5 clicks
  */
+@Slf4j
 public class GenerateData {
 
     public static KafkaProducer<Integer, String> producer = null;
@@ -94,13 +96,16 @@ public class GenerateData {
 
         // Send existing events
 
-        for (ProducerRecord record: records)
+        for (ProducerRecord record: records) {
+
             producer.send(record, (RecordMetadata r, Exception e) -> {
+                log.info(record.toString());
                 if (e != null) {
                     System.out.println("Error producing to topic " + r.topic());
                     e.printStackTrace();
                 }
             });
+        }
 
 
         // Sleep 5 seconds, to make sure we recognize the new events as a separate session
@@ -127,13 +132,17 @@ public class GenerateData {
 
 
         // Send additional events
-        for (ProducerRecord record: records)
+        for (ProducerRecord record: records) {
             producer.send(record, (RecordMetadata r, Exception e) -> {
+                log.info(record.toString());
+
                 if (e != null) {
+                    System.out.println(record.toString());
                     System.out.println("Error producing to topic " + r.topic());
                     e.printStackTrace();
                 }
             });
+        }
 
 
         // and done...
